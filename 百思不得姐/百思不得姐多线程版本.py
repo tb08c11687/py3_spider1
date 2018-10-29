@@ -6,6 +6,8 @@ import re
 from queue import Queue
 import threading
 import datetime
+import logging
+logging.basicConfig(level=logging.INFO)
 class Producer(threading.Thread):
     header = {"User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:63.0) Gecko/20100101 Firefox/63.0"}
     domain = "http://www.budejie.com"
@@ -18,10 +20,11 @@ class Producer(threading.Thread):
             if self.page_queue.empty():
                 break
             url = self.page_queue.get()
-            print(url)
+            #
             self.parse_page(url)
     def parse_page(self,url):
         #获取图片链接列表
+        logging.info("开始下载{}==========================".format(url))
         img_list_response = requests.get(url, headers=self.header).text
         html = etree.HTML(img_list_response)
         links = html.xpath("//div[@class='j-r-list-c-img']//a/@href")
@@ -51,18 +54,18 @@ class Consumer(threading.Thread):
         self.img_queue = img_queue
     def run(self):
         while True:
-            while self.img_queue.empty() and self.page_queue.empty():
+            if self.img_queue.empty() and self.page_queue.empty():
                 break
             img_url,file_name = self.img_queue.get()
-            request.urlretrieve(img_url, '/home/yuyang/PycharmProjects/py3_spider/image/' + file_name)
-            print("下载图片:{}".format(file_name))
+            request.urlretrieve(img_url, '/home/yuyang/图片/' + file_name)
+            logging.info("下载图片:{}".format(file_name))
 
 
 def main():
     page_queue = Queue(500)
     img_queue = Queue(1000)
     global delta_time
-    for x in range(5,50):
+    for x in range(1,51):
         base_url = "http://www.budejie.com/pic/{}".format(x)
         page_queue.put(base_url)
     for x in range(5):
