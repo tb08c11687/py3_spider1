@@ -14,7 +14,7 @@ class Bossspider():
     driver_path = "./chromedriver"
     def __init__(self):
         self.driver = webdriver.Chrome(executable_path=Bossspider.driver_path)
-        self.url = "https://www.zhipin.com/captcha/popUpCaptcha?redirect=https%3A%2F%2Fwww.zhipin.com%2Fjob_detail%2F%3Fquery%3Dpython%26scity%3D100010000%26industry%3D%26position%3D"
+        self.url = "https://www.zhipin.com/job_detail/?query=python&scity=100010000&industry=&position="
         self.domain = "https://www.zhipin.com/"
         self.wb = Workbook()
         self.ws = self.wb.active
@@ -83,30 +83,32 @@ class Bossspider():
     def parse_job_detail(self,source):
 
         html = etree.HTML(source)
-        if len(self.driver.find_elements_by_id("captcha")) > 0:
+
+        while len(self.driver.find_elements_by_id("captcha")) > 0:
             # self.driver.find_element_by_id() 返回一个element元素对象
             # self.driver.find_elements_by_id() 返回一个列表
             self.fill_captcha()
             time.sleep(2)
+        else:
+            # if len(html.xpath("//div[@class='info-primary']/p/text()")) >0:
+            #     break
 
-        info_primary = html.xpath("//div[@class='info-primary']/p/text()")
-        city = re.sub(r"[城市：]","",info_primary[0])
-        experience = re.sub(r"[经验：]","",info_primary[1])
-        education = re.sub(r"[学历：]","",info_primary[2])
-        salary = html.xpath("//span[@class='badge']/text()")[0].strip()
-        try:
-            company = html.xpath("//div[@class='job-sec']/div[@class='name']/text()")[0]
-        except Exception as e:
-            print(e)
-            company = "无工商信息，估计是传销"
-        desc = html.xpath("//div[@class='job-sec']/div[@class='text'][position()=1]/text()")
-        job_desc = "\n".join(desc).strip()
-        position = [city,experience,education,salary,company,job_desc]
+            info_primary = html.xpath("//div[@class='info-primary']/p/text()")
+            city = re.sub(r"[城市：]","",info_primary[0])
+            experience = re.sub(r"[经验：]","",info_primary[1])
+            education = re.sub(r"[学历：]","",info_primary[2])
+            salary = html.xpath("//span[@class='badge']/text()")[0].strip()
+            try:
+                company = html.xpath("//div[@class='job-sec']/div[@class='name']/text()")[0]
+            except Exception as e:
+                print(e)
+                company = "无工商信息，估计是传销"
+            desc = html.xpath("//div[@class='job-sec']/div[@class='text'][position()=1]/text()")
+            job_desc = "\n".join(desc).strip()
+            position = [city,experience,education,salary,company,job_desc]
 
-
-
-        self.store_position(position)
-        print(position)
+            self.store_position(position)
+            print(position)
     def store_position(self,position):
         self.ws.append(position)
         self.wb.save("./Boss.xlsx")
