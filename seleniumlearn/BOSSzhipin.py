@@ -9,6 +9,10 @@ import ssl
 import base64
 from openpyxl import Workbook
 import simplejson
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+
 
 class Bossspider():
     driver_path = "./chromedriver"
@@ -60,6 +64,7 @@ class Bossspider():
         captcha = response["data"]["captcha"].strip()
         print(captcha)
         captchaInput.send_keys(captcha)
+        time.sleep(3)
         submitBtn.click()
 
 
@@ -73,10 +78,11 @@ class Bossspider():
 
     def request_detail_page(self,url):
         self.driver.execute_script("window.open('%s')"%url)
+        time.sleep(3)
         self.driver.switch_to.window(self.driver.window_handles[1])
-
         source = self.driver.page_source
         self.parse_job_detail(source)
+        time.sleep(3)
         self.driver.close()
         self.driver.switch_to.window(self.driver.window_handles[0])
 
@@ -92,23 +98,27 @@ class Bossspider():
         else:
             # if len(html.xpath("//div[@class='info-primary']/p/text()")) >0:
             #     break
-
-            info_primary = html.xpath("//div[@class='info-primary']/p/text()")
-            city = re.sub(r"[城市：]","",info_primary[0])
-            experience = re.sub(r"[经验：]","",info_primary[1])
-            education = re.sub(r"[学历：]","",info_primary[2])
-            salary = html.xpath("//span[@class='badge']/text()")[0].strip()
             try:
-                company = html.xpath("//div[@class='job-sec']/div[@class='name']/text()")[0]
+                WebDriverWait(self.driver,10).until(EC.presence_of_element_located((By.CLASS_NAME,"info-primary")))
+                info_primary = html.xpath("//div[@class='info-primary']/p/text()")
+                city = re.sub(r"[城市：]","",info_primary[0])
+                experience = re.sub(r"[经验：]","",info_primary[1])
+                education = re.sub(r"[学历：]","",info_primary[2])
+                salary = html.xpath("//span[@class='badge']/text()")[0].strip()
+                try:
+                    company = html.xpath("//div[@class='job-sec']/div[@class='name']/text()")[0]
+                except Exception as e:
+                    print(e)
+                    company = "无工商信息，估计是传销"
+                desc = html.xpath("//div[@class='job-sec']/div[@class='text'][position()=1]/text()")
+                job_desc = "\n".join(desc).strip()
+                position = [city,experience,education,salary,company,job_desc]
+
+                self.store_position(position)
             except Exception as e:
                 print(e)
-                company = "无工商信息，估计是传销"
-            desc = html.xpath("//div[@class='job-sec']/div[@class='text'][position()=1]/text()")
-            job_desc = "\n".join(desc).strip()
-            position = [city,experience,education,salary,company,job_desc]
-
-            self.store_position(position)
-            print(position)
+                self.driver.close()
+            #
     def store_position(self,position):
         self.ws.append(position)
         self.wb.save("./Boss.xlsx")
